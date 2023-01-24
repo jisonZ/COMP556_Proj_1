@@ -6,7 +6,11 @@ PING/PONG server
 
 On local Machine, open two terminals, run the following cmd respectivly:
 ```shell
-./client_num localhost 1025
+./client_num localhost 1025 0 10
+```
+which follow the format: 
+```shell
+./client_num hostname portnumber data count
 ```
 ```shell
 ./server_num 1025

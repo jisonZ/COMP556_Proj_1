@@ -33,13 +33,16 @@ int main(int argc, char **argv)
     freeaddrinfo(getaddrinfo_result);
   }
 
+
   /* server port number */
   unsigned short server_port = atoi(argv[2]);
+  /* Number of exchange */
+  int msgSize = atoi(argv[3]);
+  /* Count number of message exchange*/
+  int count = atoi(argv[4]);
 
   char *buffer, *sendbuffer;
   int size = 500;
-  int count;
-  int num;
 
   /* allocate a memory buffer in the heap */
   /* putting a buffer on the stack like:
@@ -111,18 +114,7 @@ int main(int argc, char **argv)
 
   struct timeval current_time;
 
-  while (1)
-  {
-    printf("\nEnter the type of the number to send (options are char, short, int, or bye to quit): ");
-    fgets(buffer, size, stdin);
-    if (strncmp(buffer, "bye", 3) == 0)
-    {
-      /* free the resources, generally important! */
-      close(sock);
-      free(buffer);
-      free(sendbuffer);
-      return 0;
-    }
+  for (int i = 0; i < count; ++i) {
 
     /* first byte of the sendbuffer is used to describe the number of
        bytes used to encode a number, the number value follows the first
@@ -133,27 +125,8 @@ int main(int argc, char **argv)
     *(short *)sendbuffer = 16;
     long long* timestampPtr = (long long *)((short *)sendbuffer+1);
 
-    if (strncmp(buffer, "char", 4) == 0)
-    {
-      *(short *)sendbuffer += 1;
-    }
-    else if (strncmp(buffer, "short", 5) == 0)
-    {
-      *(short *)sendbuffer += 2;
-    }
-    else if (strncmp(buffer, "int", 3) == 0)
-    {
-      *(short *)sendbuffer += 4;
-    }
-    else
-    {
-      printf("Invalid number type entered, %s\n", buffer);
-      continue;
-    }
-
-    printf("Enter the value of the number to send: ");
-    fgets(buffer, size, stdin);
-    num = atol(buffer);
+    // we choose to send int 
+    *(short*)sendbuffer += 4;
 
     // add timestamp to buffer
     gettimeofday(&current_time, NULL);
@@ -161,24 +134,14 @@ int main(int argc, char **argv)
     *(timestampPtr+1) = (long long) current_time.tv_usec;
     int* dataPtr = (int *)(timestampPtr+2);
 
-    switch (*(short *)sendbuffer-16)
-    {
-    case 1:
-      *(char *)(dataPtr) = (char)num;
-      break;
-    case 2:
-      /* for 16 bit integer type, byte ordering matters */
-      *(short *)(dataPtr) = (short)htons(num);
-      break;
-    case 4:
-      /* for 32 bit integer type, byte ordering matters */
-      *(int *)(dataPtr) = (int)htonl(num);
-      break;
-    default:
-      break;
-    }
+    //append data of our choice
+    int num = 1;
+    *(int *)(dataPtr) = (int)htonl(num);
+
     send(sock, sendbuffer, sendbuffer[0] + 2, 0);
   }
-
+    close(sock);
+    free(buffer);
+    free(sendbuffer);
   return 0;
 }
