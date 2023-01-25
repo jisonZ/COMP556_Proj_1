@@ -12,6 +12,8 @@
 /**************************************************/
 /* a few simple linked list functions             */
 /**************************************************/
+#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 /* A linked list node data structure to maintain application
    information related to a connected socket */
@@ -231,12 +233,12 @@ int main(int argc, char **argv)
         add(&head, new_sock, addr);
 
         /* let's send a message to the client just for fun */
-        count = send(new_sock, message, strlen(message) + 1, 0);
-        if (count < 0)
-        {
-          perror("error sending message to client");
-          abort();
-        }
+        // count = send(new_sock, message, strlen(message) + 1, 0);
+        // if (count < 0)
+        // {
+        //   perror("error sending message to client");
+        //   abort();
+        // }
       }
 
       /* check other connected sockets, see if there is
