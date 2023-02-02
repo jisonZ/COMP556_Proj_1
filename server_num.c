@@ -318,53 +318,52 @@ int main(int argc, char **argv)
             // printf("connection exist\n");
             // printf("size: %d\n", (int)(*(short*)buf));
             // printf("count: %d");
-            if ((int)(*(short*)buf) + 2 != count)
+            if (ntohs(*(short*)buf) != count)
             {
               /* we got only a part of a message, we won't handle this in
                  this simple example */
-              printf("Message incomplete, something is still being transmitted\n");
-              return 0;
+              printf("Message incomplete, receving multiple times\n");
+              printf("Expected count %d\n", ntohs(*(short*)buf));
+              short expectedCount = ntohs(*(short*)buf);
+              int receivedLen = count;
+              char *fullbuf;
+              fullbuf = (char *)malloc(BUF_LEN);
+              *fullbuf = (char)*(char *)buf;
+
+              while (receivedLen < expectedCount) {
+                printf("current receveid msg len: %d\n", receivedLen);
+                count = recv(current->socket, buf, BUF_LEN, 0);
+                if (count < 0) {
+                  break;
+                }
+                printf("count: %d\n", count);
+                *(fullbuf+receivedLen) = *buf;
+                receivedLen += count;
+              }
+              printf("Full message received!\n");
+              printf("parsing msg...\n");
+              // parse timestamp
+              long long* timestampPtr = (long long *)((short *)fullbuf+1);
+              long long tv_sec = ntohll(*timestampPtr);
+              long long tv_usec = ntohll(*(timestampPtr+1));
+              short msgSize = ntohs(*(short*)fullbuf);
+
+              printf("Received at time %lld:%lld. Client IP address is: %s\n",
+                     tv_sec, tv_usec, inet_ntoa(current->client_addr.sin_addr));
             }
             else
             {
               printf("parsing msg...\n");
               // parse timestamp
               long long* timestampPtr = (long long *)((short *)buf+1);
-              long long tv_sec = *timestampPtr;
-              long long tv_usec = *(timestampPtr+1);
-              short msgSize = *(short*)buf;
+              long long tv_sec = ntohll(*timestampPtr);
+              long long tv_usec = ntohll(*(timestampPtr+1));
+              short msgSize = ntohs(*(short*)buf);
 
-              switch (msgSize-16)
-              {
-              case 1:
-                /* note the type casting here forces signed extension
-                   to preserve the signedness of the value */
-                /* note also the use of parentheses for pointer
-                   dereferencing is critical here */
-                num = (char)*(char *)(buf + 18);
-                break;
-              case 2:
-                /* note the type casting here forces signed extension
-                   to preserve the signedness of the value */
-                /* note also the use of parentheses for pointer
-                   dereferencing is critical here */
-                /* note for 16 bit integers, byte ordering matters */
-                num = (short)ntohs(*(short *)(buf + 18));
-                break;
-              case 4:
-                /* note the type casting here forces signed extension
-                   to preserve the signedness of the value */
-                /* note also the use of parentheses for pointer
-                   dereferencing is critical here */
-                /* note for 32 bit integers, byte ordering matters */
-                num = (int)ntohl(*(int *)(buf + 18));
-                break;
-              default:
-                break;
-              }
+
               /* a complete message is received, print it out */
-              printf("Received the number \"%d\" at time %lld:%lld. Client IP address is: %s\n",
-                     num, tv_sec, tv_usec, inet_ntoa(current->client_addr.sin_addr));
+              printf("Received at time %lld:%lld. Client IP address is: %s\n",
+                     tv_sec, tv_usec, inet_ntoa(current->client_addr.sin_addr));
             }
           }
         }

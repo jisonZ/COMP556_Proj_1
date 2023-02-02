@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 
     // tv_sec (8B) + tv_usec (8B)
     // use short (2B) for size
-    *(short *)sendbuffer = msgSize;
+    *(short *)sendbuffer = htons(msgSize);
     long long* timestampPtr = (long long *)((short *)sendbuffer+1);
 
     // add timestamp to buffer
