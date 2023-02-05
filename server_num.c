@@ -9,11 +9,12 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
+int MaxBufSiz = 65535;
 /**************************************************/
 /* a few simple linked list functions             */
 /**************************************************/
-#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
-#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+#define htonll(x) ((1 == htonl(1)) ? (x) : ((uint64_t)htonl((x)&0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1 == ntohl(1)) ? (x) : ((uint64_t)ntohl((x)&0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 /* A linked list node data structure to maintain application
    information related to a connected socket */
@@ -21,10 +22,16 @@ struct node
 {
   int socket;
   struct sockaddr_in client_addr;
+
   int pending_data; /* flag to indicate whether there is more data to send */
-  /* you will need to introduce some variables here to record
-     all the information regarding this socket.
-     e.g. what data needs to be sent next */
+  char *sendBuf;    /* buffer for the remaining send message*/
+  int sendLen;      /* number of bytes to send*/
+
+  int pending_rece; /* flag to indicate whether more data need to be received*/
+  char *receBuf;    /* buffer for the received message*/
+  int receLen;      /* received byte length*/
+  int expectedRece; /* expected bytes to receive*/
+
   struct node *next;
 };
 
@@ -43,6 +50,8 @@ void dump(struct node *head, int socket)
       /* remove */
       temp = current->next;
       current->next = temp->next;
+      free(temp->sendBuf);
+      free(temp->receBuf);
       free(temp); /* don't forget to free memory */
       return;
     }
@@ -61,7 +70,15 @@ void add(struct node *head, int socket, struct sockaddr_in addr)
   new_node = (struct node *)malloc(sizeof(struct node));
   new_node->socket = socket;
   new_node->client_addr = addr;
+
   new_node->pending_data = 0;
+  new_node->pending_rece = 0;
+  new_node->sendBuf = (char *)malloc(MaxBufSiz);
+  new_node->receBuf = (char *)malloc(MaxBufSiz);
+  new_node->sendLen = 0;
+  new_node->receLen = 0;
+  new_node->expectedRece = -1;
+
   new_node->next = head->next;
   head->next = new_node;
 }
@@ -108,7 +125,7 @@ int main(int argc, char **argv)
 
   /* a buffer to read data */
   char *buf;
-  int BUF_LEN = 1000;
+  int BUF_LEN = MaxBufSiz;
 
   buf = (char *)malloc(BUF_LEN);
 
@@ -186,6 +203,7 @@ int main(int argc, char **argv)
     time_out.tv_sec = 0;
 
     /* invoke select, make sure to pass max+1 !!! */
+    /* Select() function is destructive on the sets */
     select_retval = select(max + 1, &read_set, &write_set, NULL, &time_out);
     if (select_retval < 0)
     {
@@ -254,10 +272,12 @@ int main(int argc, char **argv)
           /* the socket is now ready to take more data */
           /* the socket data structure should have information
                    describing what data is supposed to be sent next.
-             but here for simplicity, let's say we are just
-                   sending whatever is in the buffer buf
                  */
-          count = send(current->socket, buf, BUF_LEN, MSG_DONTWAIT);
+          count = send(current->socket,
+                       current->sendBuf,
+                       current->sendLen,
+                       MSG_DONTWAIT);
+
           if (count < 0)
           {
             if (errno == EAGAIN)
@@ -267,10 +287,12 @@ int main(int argc, char **argv)
                  will have to go back to select and wait til select
                  tells us the socket is ready for writing
               */
+              /* nothing need to be done*/
             }
             else
             {
               /* something else is wrong */
+              printf("send() error");
             }
           }
           /* note that it is important to check count for exactly
@@ -278,6 +300,15 @@ int main(int argc, char **argv)
                    no error. send() may send only a portion of the buffer
                    to be sent.
           */
+          if (current->sendLen - count > 0)
+          {
+            current->sendBuf += count;
+            current->sendLen -= count;
+          }
+          else
+          {
+            current->pending_data = 0;
+          }
         }
 
         if (FD_ISSET(current->socket, &read_set))
@@ -285,7 +316,7 @@ int main(int argc, char **argv)
           /* we have data from a client */
           printf("recving...\n");
           count = recv(current->socket, buf, BUF_LEN, 0);
-          
+
           if (count <= 0)
           {
             /* something is wrong */
@@ -315,55 +346,53 @@ int main(int argc, char **argv)
             /* in this case, we expect a message where the first byte
                            stores the number of bytes used to encode a number,
                            followed by that many bytes holding a numeric value */
-            // printf("connection exist\n");
-            // printf("size: %d\n", (int)(*(short*)buf));
-            // printf("count: %d");
-            if (ntohs(*(short*)buf) != count)
+
+            /* append data */
+            *(current->receBuf + current->receLen) = *buf;
+            current->receLen += count;
+
+            /* check if everyting is received */
+            if (current->expectedRece == -1)
             {
-              /* we got only a part of a message, we won't handle this in
-                 this simple example */
-              printf("Message incomplete, receving multiple times\n");
-              printf("Expected count %d\n", ntohs(*(short*)buf));
-              short expectedCount = ntohs(*(short*)buf);
-              int receivedLen = count;
-              char *fullbuf;
-              fullbuf = (char *)malloc(BUF_LEN);
-              *fullbuf = (char)*(char *)buf;
-
-              while (receivedLen < expectedCount) {
-                printf("current receveid msg len: %d\n", receivedLen);
-                count = recv(current->socket, buf, BUF_LEN, 0);
-                if (count < 0) {
-                  break;
-                }
-                printf("count: %d\n", count);
-                *(fullbuf+receivedLen) = *buf;
-                receivedLen += count;
+              /* if expected receiving length not specified*/
+              if (current->receLen >= 2)
+              {
+                current->expectedRece = ntohs(*(short *)current->receBuf);
               }
-              printf("Full message received!\n");
-              printf("parsing msg...\n");
-              // parse timestamp
-              long long* timestampPtr = (long long *)((short *)fullbuf+1);
-              long long tv_sec = ntohll(*timestampPtr);
-              long long tv_usec = ntohll(*(timestampPtr+1));
-              short msgSize = ntohs(*(short*)fullbuf);
+            }
 
-              printf("Received at time %lld:%lld. Client IP address is: %s\n",
-                     tv_sec, tv_usec, inet_ntoa(current->client_addr.sin_addr));
+            if (current->receLen < current->expectedRece || current->expectedRece == -1)
+            {
+              /* do nothing, insert debug message*/
+              current->pending_rece = 1;
             }
             else
             {
+              /* everything received*/
+              current->pending_rece = 0;
+              /* process timestamp*/
+              printf("Full message received!\n");
               printf("parsing msg...\n");
-              // parse timestamp
-              long long* timestampPtr = (long long *)((short *)buf+1);
+
+              long long *timestampPtr = (long long *)((short *)current->receBuf + 1);
               long long tv_sec = ntohll(*timestampPtr);
-              long long tv_usec = ntohll(*(timestampPtr+1));
-              short msgSize = ntohs(*(short*)buf);
+              long long tv_usec = ntohll(*(timestampPtr + 1));
 
-
-              /* a complete message is received, print it out */
-              printf("Received at time %lld:%lld. Client IP address is: %s\n",
+              printf("Client sent at time %lld:%lld. Client IP address is: %s\n",
                      tv_sec, tv_usec, inet_ntoa(current->client_addr.sin_addr));
+            }
+
+            /* send return message*/
+            /* dont need to consider if the socket need to receive while sending*/
+            if (!current->pending_rece)
+            {
+              current->pending_data = 1;
+              current->sendBuf = current->receBuf;
+              current->sendLen = current->receLen;
+
+              /* clear recv condition*/
+              current->receLen = 0;
+              current->expectedRece = -1;
             }
           }
         }
