@@ -50,7 +50,7 @@ void dump(struct node *head, int socket)
       /* remove */
       temp = current->next;
       current->next = temp->next;
-      free(temp->sendBuf);
+      //free(temp->sendBuf);
       free(temp->receBuf);
       free(temp); /* don't forget to free memory */
       return;
@@ -73,7 +73,7 @@ void add(struct node *head, int socket, struct sockaddr_in addr)
 
   new_node->pending_data = 0;
   new_node->pending_rece = 0;
-  new_node->sendBuf = (char *)malloc(MaxBufSiz);
+  // new_node->sendBuf = (char *)malloc(MaxBufSiz);
   new_node->receBuf = (char *)malloc(MaxBufSiz);
   new_node->sendLen = 0;
   new_node->receLen = 0;
@@ -111,13 +111,13 @@ int main(int argc, char **argv)
   int select_retval;
 
   /* a silly message */
-  char *message = "Welcome! COMP/ELEC 429 Students!\n";
+  // char *message = "Welcome! COMP/ELEC 429 Students!\n";
 
   /* number of bytes sent/received */
   int count;
 
   /* numeric value received */
-  int num;
+  // int num;
 
   /* linked list for keeping track of connected sockets */
   struct node head;
@@ -348,16 +348,24 @@ int main(int argc, char **argv)
                            followed by that many bytes holding a numeric value */
 
             /* append data */
-            *(current->receBuf + current->receLen) = *buf;
+            printf("Fore time recvBuf specified %d\n", ntohs(*(short *)current->receBuf));
+            // *(current->receBuf + current->receLen) = *buf;
+            memcpy(current->receBuf + current->receLen, buf, count);
+            
             current->receLen += count;
+            printf("Buff time specified %d\n", ntohs(*(short *)buf));
+            printf("First Count =  %d\n", current->receLen);
 
             /* check if everyting is received */
             if (current->expectedRece == -1)
             {
+              printf("Not specified Length\n");
               /* if expected receiving length not specified*/
               if (current->receLen >= 2)
               {
                 current->expectedRece = ntohs(*(short *)current->receBuf);
+                printf("First time specified %d\n", current->expectedRece);
+                printf("First time Recev Lenght %d\n", current->receLen);
               }
             }
 
@@ -368,6 +376,8 @@ int main(int argc, char **argv)
             }
             else
             {
+              printf("Current Recev Lenght %d\n", current->receLen);
+              printf("Current Expected Lenght %d\n", current->expectedRece);
               /* everything received*/
               current->pending_rece = 0;
               /* process timestamp*/

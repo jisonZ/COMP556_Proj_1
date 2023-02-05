@@ -137,9 +137,10 @@ int main(int argc, char **argv)
     // int temp = send(sock, sendbuffer + sendMsgSize, msgSize-sendMsgSize, 0);
     
     while (sendMsgSize < msgSize) {
-      int temp = send(sock, sendbuffer + sendMsgSize, msgSize-sendMsgSize, 0);
+      int temp = send(sock, sendbuffer + sendMsgSize, 1, 0);
       printf("temp = %d\n", temp);
       sendMsgSize += temp;
+      sleep(1);
     }
 
     // wait till the response
@@ -159,7 +160,8 @@ int main(int argc, char **argv)
         perror("receive failure");
         abort();
       }
-      *(recvBuffer + recvCount) = *buffer;
+      // *(recvBuffer + recvCount) = *buffer;
+      memcpy(recvBuffer + recvCount, buffer, tmp);
       recvCount += tmp;
     }
     /* we compare the recieved message with sent message*/
