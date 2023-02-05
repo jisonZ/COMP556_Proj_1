@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     perror("connect to server failed");
     abort();
   }
-  printf("Client Connected\n");
+  printf("Client is Connected\n");
 
   struct timeval current_time;
   /* send messgae in a loop*/
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     
     while (sendMsgSize < msgSize) {
       int temp = send(sock, sendbuffer + sendMsgSize, msgSize-sendMsgSize, 0);
-      printf("temp = %d\n", temp);
+      // printf("temp = %d\n", temp);
       sendMsgSize += temp;
     }
 

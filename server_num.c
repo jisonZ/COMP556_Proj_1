@@ -348,24 +348,24 @@ int main(int argc, char **argv)
                            followed by that many bytes holding a numeric value */
 
             /* append data */
-            printf("Fore time recvBuf specified %d\n", ntohs(*(short *)current->receBuf));
+            //printf("Fore time recvBuf specified %d\n", ntohs(*(short *)current->receBuf));
             // *(current->receBuf + current->receLen) = *buf;
             memcpy(current->receBuf + current->receLen, buf, count);
             
             current->receLen += count;
-            printf("Buff time specified %d\n", ntohs(*(short *)buf));
-            printf("First Count =  %d\n", current->receLen);
+            //printf("Buff time specified %d\n", ntohs(*(short *)buf));
+           // printf("First Count =  %d\n", current->receLen);
 
             /* check if everyting is received */
             if (current->expectedRece == -1)
             {
-              printf("Not specified Length\n");
+              //printf("Not specified Length\n");
               /* if expected receiving length not specified*/
               if (current->receLen >= 2)
               {
                 current->expectedRece = ntohs(*(short *)current->receBuf);
-                printf("First time specified %d\n", current->expectedRece);
-                printf("First time Recev Lenght %d\n", current->receLen);
+                //printf("First time specified %d\n", current->expectedRece);
+                //printf("First time Recev Lenght %d\n", current->receLen);
               }
             }
 
@@ -376,8 +376,8 @@ int main(int argc, char **argv)
             }
             else
             {
-              printf("Current Recev Lenght %d\n", current->receLen);
-              printf("Current Expected Lenght %d\n", current->expectedRece);
+              //printf("Current Recev Lenght %d\n", current->receLen);
+              //printf("Current Expected Lenght %d\n", current->expectedRece);
               /* everything received*/
               current->pending_rece = 0;
               /* process timestamp*/
