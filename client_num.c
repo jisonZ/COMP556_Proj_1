@@ -7,11 +7,29 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/time.h>
+
+#define htonll(x) ((1 == htonl(1)) ? (x) : ((uint64_t)htonl((x)&0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1 == ntohl(1)) ? (x) : ((uint64_t)ntohl((x)&0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 /* simple client, takes two parameters, the server domain name,
    and the server port number */
 
-int main(int argc, char** argv) {
+unsigned char *gen_rdm_bytestream(size_t num_bytes)
+{
+  unsigned char *stream = malloc(num_bytes);
+  size_t i;
+
+  for (i = 0; i < num_bytes; i++)
+  {
+    stream[i] = rand();
+  }
+
+  return stream;
+}
+
+int main(int argc, char **argv)
+{
 
   /* our client socket */
   int sock;
@@ -25,18 +43,26 @@ int main(int argc, char** argv) {
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_INET; /* indicates we want IPv4 */
 
-  if (getaddrinfo(argv[1], NULL, &hints, &getaddrinfo_result) == 0) {
-    server_addr = (unsigned int) ((struct sockaddr_in *) (getaddrinfo_result->ai_addr))->sin_addr.s_addr;
+  if (getaddrinfo(argv[1], NULL, &hints, &getaddrinfo_result) == 0)
+  {
+    server_addr = (unsigned int)((struct sockaddr_in *)(getaddrinfo_result->ai_addr))->sin_addr.s_addr;
     freeaddrinfo(getaddrinfo_result);
   }
 
   /* server port number */
-  unsigned short server_port = atoi (argv[2]);
+  unsigned short server_port = atoi(argv[2]);
+  /* size of the message */
+  /* 18 <= size <= 65535*/
+  int msgSize = atoi(argv[3]);
+  if (msgSize < 18 || msgSize > 65535)
+  {
+    perror("out of bound message size");
+    abort();
+  }
+  /* Count number of message exchange*/
+  int count = atoi(argv[4]);
 
   char *buffer, *sendbuffer;
-  int size = 500;
-  int count;
-  int num;
 
   /* allocate a memory buffer in the heap */
   /* putting a buffer on the stack like:
@@ -45,114 +71,104 @@ int main(int argc, char** argv) {
 
      leaves the potential for
      buffer overflow vulnerability */
-  buffer = (char *) malloc(size);
+  buffer = (char *)malloc(msgSize);
   if (!buffer)
-    {
-      perror("failed to allocated buffer");
-      abort();
-    }
+  {
+    perror("failed to allocated buffer");
+    abort();
+  }
 
-  sendbuffer = (char *) malloc(size);
+  sendbuffer = (char *)malloc(msgSize);
   if (!sendbuffer)
-    {
-      perror("failed to allocated sendbuffer");
-      abort();
-    }
-
+  {
+    perror("failed to allocated sendbuffer");
+    abort();
+  }
 
   /* create a socket */
-  if ((sock = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-    {
-      perror ("opening TCP socket");
-      abort ();
-    }
+  if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  {
+    perror("opening TCP socket");
+    abort();
+  }
 
   /* fill in the server's address */
-  memset (&sin, 0, sizeof (sin));
+  memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = server_addr;
   sin.sin_port = htons(server_port);
 
   /* connect to the server */
-  if (connect(sock, (struct sockaddr *) &sin, sizeof (sin)) < 0)
-    {
-      perror("connect to server failed");
-      abort();
-    }
-
-  /* everything looks good, since we are expecting a
-     message from the server in this example, let's try receiving a
-     message from the socket. this call will block until some data
-     has been received */
-  count = recv(sock, buffer, size, 0);
-  if (count < 0)
-    {
-      perror("receive failure");
-      abort();
-    }
-
-  /* in this simple example, the message is a string, 
-     we expect the last byte of the string to be 0, i.e. end of string */
-  if (buffer[count-1] != 0)
-    {
-      /* In general, TCP recv can return any number of bytes, not
-	 necessarily forming a complete message, so you need to
-	 parse the input to see if a complete message has been received.
-         if not, more calls to recv is needed to get a complete message.
-      */
-      printf("Message incomplete, something is still being transmitted\n");
-    } 
-  else
-    {
-      printf("Here is what we got: %s", buffer);
-    }
-
-  while (1){ 
-    printf("\nEnter the type of the number to send (options are char, short, int, or bye to quit): ");
-    fgets(buffer, size, stdin);
-    if (strncmp(buffer, "bye", 3) == 0) {
-      /* free the resources, generally important! */
-      close(sock);
-      free(buffer);
-      free(sendbuffer);
-      return 0;
-    }
-
-    /* first byte of the sendbuffer is used to describe the number of
-       bytes used to encode a number, the number value follows the first 
-       byte */
-    if (strncmp(buffer, "char", 4) == 0) {
-      sendbuffer[0] = 1;
-    } else if (strncmp(buffer, "short", 5) == 0) {
-      sendbuffer[0] = 2;
-    } else if (strncmp(buffer, "int", 3) == 0) {
-      sendbuffer[0] = 4;
-    } else {
-      printf("Invalid number type entered, %s\n", buffer);
-      continue;
-    }
-
-    printf("Enter the value of the number to send: ");
-    fgets(buffer, size, stdin);
-    num = atol(buffer);
-
-    switch(sendbuffer[0]) {
-    case 1:
-      *(char *) (sendbuffer+1) = (char) num;
-      break;
-    case 2:
-      /* for 16 bit integer type, byte ordering matters */
-      *(short *) (sendbuffer+1) = (short) htons(num);
-      break;
-    case 4:
-      /* for 32 bit integer type, byte ordering matters */
-      *(int *) (sendbuffer+1) = (int) htonl(num);
-      break;
-    default:
-      break;
-    }
-    send(sock, sendbuffer, sendbuffer[0]+1, 0);
+  if (connect(sock, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+  {
+    perror("connect to server failed");
+    abort();
   }
 
+  struct timeval current_time;
+  /* send messgae in a loop*/
+  for (int i = 0; i < count; ++i)
+  {
+
+    /* first byte of the sendbuffer is used to describe the number of
+       bytes used to encode a number, the number value follows the first
+       byte */
+
+    // tv_sec (8B) + tv_usec (8B)
+    // use short (2B) for size
+    *(short *)sendbuffer = htons(msgSize);
+    long long *timestampPtr = (long long *)((short *)sendbuffer + 1);
+
+    // add timestamp to buffer
+    gettimeofday(&current_time, NULL);
+    *timestampPtr = htonll((long long)current_time.tv_sec);
+    *(timestampPtr + 1) = htonll((long long)current_time.tv_usec);
+    unsigned char *dataPtr = (unsigned char *)(timestampPtr + 2);
+
+    // generate random data array
+    unsigned char *testbytestream = gen_rdm_bytestream(msgSize - 18);
+    *dataPtr = testbytestream;
+    printf("send message at tv_sec %lld, tv_usec %lld\n", current_time.tv_sec, current_time.tv_usec);
+    
+    int sendMsgSize = 0;
+    while (sendMsgSize < msgSize) {
+      int temp = send(sock, sendbuffer + sendMsgSize, msgSize-sendMsgSize, 0);
+      sendMsgSize += temp;
+    }
+
+    // wait till the response
+    /* everything looks good, since we are expecting a
+   message from the server in this example, let's try receiving a
+   message from the socket. this call will block until some data
+   has been received */
+    char *recvBuffer;
+    recvBuffer = (char *)malloc(msgSize);
+    int recvCount = 0;
+
+    while (recvCount < msgSize)
+    {
+      int tmp = recv(sock, buffer, msgSize, 0);
+      if (tmp < 0)
+      {
+        perror("receive failure");
+        abort();
+      }
+      *(recvBuffer + recvCount) = *buffer;
+      recvCount += tmp;
+    }
+    /* we compare the recieved message with sent message*/
+    if (*(unsigned char *)recvBuffer == *(unsigned char *)sendbuffer)
+    {
+      printf("Return Message Successfully decoded!\n");
+    }
+    else
+    {
+      printf("Return Message Corrupted!\n");
+    }
+  }
+
+  close(sock);
+  free(buffer);
+  free(sendbuffer);
   return 0;
 }
