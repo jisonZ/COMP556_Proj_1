@@ -17,6 +17,18 @@ which follow the format:
 ```
 The two sockets connect over localhost IP(27.0.0.1) and port 1025 (change this if running on CLEAR)
 
+## Latency Measure
+On local Machine, simulate network latency on localhost using:
+```shell
+sudo tc qdisc add dev lo root netem delay 100ms
+```
+Delete restriction:
+```shell
+sudo tc qdisc del dev lo root
+```
+Run `Stats_gen_test.py` to evaluate model.
+Run `Stats_gen.py` to run model.
+
 ## LOG
 
 1/21: server is able to recieve and decode timestamp and message
