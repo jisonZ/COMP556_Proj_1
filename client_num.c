@@ -106,6 +106,12 @@ int main(int argc, char **argv)
   }
   printf("Client is Connected\n");
 
+  /* initialize file for logging*/
+  FILE *fp;
+
+  fp = fopen("Part3.log", "w+");
+  fprintf(fp, "%d\n", count);
+
   struct timeval current_time;
   /* send messgae in a loop*/
   size_t i;
@@ -132,7 +138,8 @@ int main(int argc, char **argv)
     unsigned char *testbytestream = gen_rdm_bytestream(msgSize - 18);
     *dataPtr = testbytestream;
     printf("send message at tv_sec %lld, tv_usec %lld\n", current_time.tv_sec, current_time.tv_usec);
-    
+    fprintf(fp, "%lld.%lld\n", current_time.tv_sec, current_time.tv_usec);
+
     int sendMsgSize = 0;
     // int temp = send(sock, sendbuffer + sendMsgSize, msgSize-sendMsgSize, 0);
     
@@ -162,6 +169,13 @@ int main(int argc, char **argv)
       *(recvBuffer + recvCount) = *buffer;
       recvCount += tmp;
     }
+    
+    /* get timestamp at receiving time*/
+    gettimeofday(&current_time, NULL);
+
+    // generate random data array
+    fprintf(fp, "%lld.%lld\n", current_time.tv_sec, current_time.tv_usec);
+
     /* we compare the recieved message with sent message*/
     if (*(unsigned char *)recvBuffer == *(unsigned char *)sendbuffer)
     {
@@ -172,6 +186,7 @@ int main(int argc, char **argv)
       printf("Return Message Corrupted!\n");
     }
   }
+  fclose(fp);
 
   close(sock);
   free(buffer);
