@@ -19,6 +19,7 @@ The two sockets connect over localhost IP(27.0.0.1) and port 1025 (change this i
 
 ## Latency Model Evaluation
 To evaluation the performance and accuracy of our model, we first test it on localhost with simulated latency using the linux `tc` tool.
+
 On local Machine, simulate network latency on localhost using:
 ```shell
 sudo tc qdisc add dev lo root netem delay 100ms
