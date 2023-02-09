@@ -50,24 +50,40 @@ def main():
     # plt.scatter(data_size_axis, latency_axis)
     # plt.show()
 
-    latency_axis = np.array(latency_axis)
-    data_size_axis = np.array(data_size_axis)
-    latency_mean = np.mean(latency_axis)
-    latency_stddev = np.std(latency_axis)
-    print(latency_stddev)
-    print(latency_mean)
+
+
     x , y  = [] , []
     for i in range(len(latency_axis)):
-        if np.abs(latency_axis[i] - latency_mean) < 2 * latency_stddev:
+        if latency_axis[i] > 0:
             y.append(latency_axis[i])
             x.append(data_size_axis[i])
+
+
+    latency_mean = np.mean(y)
+    latency_stddev = np.std(y)
+
+    rx, ry = [], []
+    for i in range(len(y)):
+        if np.abs(y[i] - latency_mean) < 2 * latency_stddev:
+            ry.append(y[i])
+            rx.append(x[i])
         else:
-            print("Remove " + str(latency_axis[i]))
-    slope, intercept, r, p, std_err = stats.linregress(x,y)
+            print("Remove " + str(y[i]))
+    slope, intercept, r, p, std_err = stats.linregress(rx,ry)
+    xseq = np.linspace(0, 65535, num=100)
     print(f"Regression to {intercept*1e3}ms")
-    plt.scatter(x, y)
-    plt.savefig('result.png')
+    plt.scatter(rx, ry)
+    plt.plot(xseq, intercept + slope * xseq, color='k', lw=2.5, label='Regression line, Independent Latency = {}ms'.format(intercept*1e3))
+    plt.xlabel('Data Size/Bytes')
+    plt.ylabel('Total Transmission Time/s')
+    plt.legend()
+    plt.savefig('result_0.png')
     plt.show()
+    with open('ry.npy', 'wb') as f:
+        np.save(f, np.array(ry))
+    
+    with open('rx.npy', 'wb') as f:
+        np.save(f, np.array(rx))
 
 if __name__ == '__main__':
     try:

@@ -46,7 +46,7 @@ def main():
         latency_axis = []
         for j in tqdm(range(args.n)):
             data_size = int(18 + j*((65535-18)/args.n))
-            client_cmd = ['./client_num', 'localhost', '1800', f"{data_size}", "100"]
+            client_cmd = ['./client_num', 'ccnc-01.arc.rice.edu', '18188', f"{data_size}", "100"]
             subprocess.Popen(client_cmd, stdout=subprocess.DEVNULL).wait()
             allRRT = getRRT()
             avgLat = sum(allRRT)/len(allRRT)

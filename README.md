@@ -28,10 +28,14 @@ sudo tc qdisc del dev lo root
 ```
 Run `Stats_gen_test.py` to evaluate model.
 Run `Stats_gen.py` to run model.
+We measure the latency between ccnc-01 and ccnc-02, the result is approximate 0.06ms
+Details can be seen in Report
+
 
 ## LOG
 
 1/21: server is able to recieve and decode timestamp and message
+2/8: Server is able finish All project
 
 ## Member
 
