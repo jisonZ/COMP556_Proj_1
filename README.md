@@ -17,7 +17,8 @@ which follow the format:
 ```
 The two sockets connect over localhost IP(27.0.0.1) and port 1025 (change this if running on CLEAR)
 
-## Latency Measure
+## Latency Model Evaluation
+To evaluation the performance and accuracy of our model, we first test it on localhost with simulated latency using the linux `tc` tool.
 On local Machine, simulate network latency on localhost using:
 ```shell
 sudo tc qdisc add dev lo root netem delay 100ms
@@ -26,7 +27,9 @@ Delete restriction:
 ```shell
 sudo tc qdisc del dev lo root
 ```
-Run `Stats_gen_test.py` to evaluate model.
+The above commands are integrated into the testing script. First start server program, then run `Stats_gen_test.py` to evaluate model.
+
+## Latency Measurement on CLEAR server
 Run `Stats_gen.py` to run model.
 
 We measure the latency between ccnc-01 and ccnc-02, the result is approximate 0.05715ms
