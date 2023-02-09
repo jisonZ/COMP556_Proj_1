@@ -17,6 +17,8 @@ which follow the format:
 ```
 The two sockets connect over localhost IP(27.0.0.1) and port 1025 (change this if running on CLEAR)
 
+`test_client` is used for testing communication by setting recving and sending limited number of bytes each iteration.
+
 ## Latency Model Evaluation
 To evaluation the performance and accuracy of our model, we first test it on localhost with simulated latency using the linux `tc` tool.
 
