@@ -13,8 +13,8 @@ server_num: server_num.c
 client_num: client_num.c
 	$(CC) $(DEFS) $(CFLAGS) $(LIB) -o client_num client_num.c
 
-stupid_client: stupid_client.c
-	$(CC) $(DEFS) $(CFLAGS) $(LIB) -o stupid_client stupid_client.c
+test_client: test_client.c
+	$(CC) $(DEFS) $(CFLAGS) $(LIB) -o test_client test_client.c
 
 clean:
 	rm -f *.o
@@ -22,4 +22,4 @@ clean:
 	rm -f core.*.*
 	rm -f server_num
 	rm -f client_num
-	rm -f stupid_client
+	rm -f test_client
