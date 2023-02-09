@@ -11,11 +11,17 @@ if __name__ == '__main__':
 
     fx, fy = [], []
     real_max = ry[-1]
+    ma = 0.0008424520492553711
     for i in range(len(ry)):
-        if ry[i] <= ry[-1]:
-            fy.append(ry[i])
-            fx.append(rx[i])
-    
+        if (rx[i] < 10000 and rx[i] > 0):
+            if ry[i] < 0.0004:
+                fy.append(ry[i])
+                fx.append(rx[i])
+        else:
+            if ry[i] <= ma :
+                fy.append(ry[i])
+                fx.append(rx[i])
+        
     slope, intercept, r, p, std_err = stats.linregress(fx,fy)
     xseq = np.linspace(0, 65535, num=100)
     print(f"Regression to {intercept*1e3}ms")

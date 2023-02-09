@@ -28,7 +28,9 @@ sudo tc qdisc del dev lo root
 ```
 Run `Stats_gen_test.py` to evaluate model.
 Run `Stats_gen.py` to run model.
-We measure the latency between ccnc-01 and ccnc-02, the result is approximate 0.06ms
+
+We measure the latency between ccnc-01 and ccnc-02, the result is approximate 0.05715ms
+
 Details can be seen in Report
 
 
